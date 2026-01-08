@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 import json
-import html
+import html  # IMPORTANT: Use html.escape() instead of manual replace
 
 class PipelineOrchestrator:
     def __init__(self, log_file, output_dir, chunk_size=20000):
@@ -403,8 +403,7 @@ class PipelineOrchestrator:
                 'clustered': int(n_clustered),
                 'noise': int(n_noise)
             },
-            'bar': top_10_clusters,
-            'scatter': scatter_data
+            'bar': top_10_clusters
         }
     
     def _get_html_header(self):
@@ -476,8 +475,6 @@ class PipelineOrchestrator:
         .chart-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .chart-title { font-size: 1.3em; color: #2c3e50; margin-bottom: 20px; text-align: center; font-weight: bold; }
         .chart-canvas { position: relative; height: 300px; }
-        .scatter-container { grid-column: 1 / -1; }
-        .scatter-container .chart-canvas { height: 400px; }
         .content { padding: 40px; }
         .section { margin-bottom: 40px; }
         .section-title {
@@ -668,12 +665,6 @@ class PipelineOrchestrator:
                     </div>
                 </div>
                 
-                <div class="chart-container scatter-container">
-                    <div class="chart-title">Cluster Size Distribution (Patterns vs Requests)</div>
-                    <div class="chart-canvas">
-                        <canvas id="scatterChart"></canvas>
-                    </div>
-                </div>
             </div>
         </div>
         
@@ -1013,67 +1004,6 @@ class PipelineOrchestrator:
                 });
             }
             
-            // Scatter Plot
-            const scatterCtx = document.getElementById('scatterChart');
-            if (scatterCtx) {
-                const scatterData = chartData.scatter.map(item => ({
-                    x: item.x,
-                    y: item.y,
-                    cluster_id: item.cluster_id
-                }));
-                
-                new Chart(scatterCtx.getContext('2d'), {
-                    type: 'scatter',
-                    data: {
-                        datasets: [{
-                            label: 'Clusters',
-                            data: scatterData,
-                            backgroundColor: '#4e73df',
-                            borderColor: '#2e59d9',
-                            borderWidth: 1,
-                            pointRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Number of URL Patterns'
-                                }
-                            },
-                            y: {
-                                title: {
-                                    display: true,
-                                    text: 'Number of Requests'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return value.toLocaleString();
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const point = context.raw;
-                                        return [
-                                            'Cluster ID: ' + point.cluster_id,
-                                            'Patterns: ' + point.x,
-                                            'Requests: ' + point.y.toLocaleString()
-                                        ];
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
             
             console.log('Charts initialized successfully!');
         });
