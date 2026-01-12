@@ -1,0 +1,3189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Clustering Report - Security Investigation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        .stat-number { font-size: 3em; font-weight: bold; color: #667eea; margin: 10px 0; }
+        .stat-label { color: #666; font-size: 1.1em; text-transform: uppercase; letter-spacing: 1px; }
+        .charts-section { padding: 40px; background: #f8f9fa; }
+        .charts-title {
+            font-size: 2em;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            text-align: center;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .chart-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .chart-title { font-size: 1.3em; color: #2c3e50; margin-bottom: 20px; text-align: center; font-weight: bold; }
+        .chart-canvas { position: relative; height: 300px; }
+        .content { padding: 40px; }
+        .section { margin-bottom: 40px; }
+        .section-title {
+            font-size: 2em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .cluster-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+        .cluster-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2); }
+        .cluster-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .cluster-header:hover { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); }
+        .cluster-title { font-size: 1.5em; font-weight: bold; }
+        .cluster-count { background: rgba(255,255,255,0.2); padding: 8px 15px; border-radius: 20px; font-size: 1.1em; }
+        .cluster-body { padding: 20px; display: none; background: #f8f9fa; }
+        .cluster-body.active { display: block; }
+        .noise-section { background: #fff3cd; border: 2px solid #ffc107; border-radius: 10px; padding: 20px; }
+        .noise-section .section-title { color: #856404; border-bottom-color: #ffc107; }
+        .show-more-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        .show-more-btn:hover { background: #764ba2; transform: scale(1.05); }
+        .footer { background: #2c3e50; color: white; text-align: center; padding: 20px; font-size: 0.9em; }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-warning { background: #ffc107; color: #333; }
+        .badge-danger { background: #dc3545; color: white; }
+        .pattern-block {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.2s;
+        }
+        .pattern-block:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15); }
+        .pattern-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .url-pattern {
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #667eea;
+            word-break: break-all;
+        }
+        .occurrence-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .original-examples {
+            padding: 10px;
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .original-examples strong { color: #2c3e50; font-size: 0.9em; display: block; margin-bottom: 8px; }
+        .example-list { list-style: none; margin: 0; padding: 0; }
+        .example-list li {
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            background: white;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: #495057;
+            word-break: break-all;
+            border-left: 2px solid #667eea;
+        }
+        .example-list li:hover { background: #e8f0fe; }
+        .example-list li em { color: #6c757d; font-style: italic; }
+        .noise-pattern { border-color: #ffc107; background: #fffbf0; }
+        .noise-pattern .original-examples { border-left-color: #ffc107; }
+        .noise-pattern .example-list li { border-left-color: #ffc107; }
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+        .warning-box strong { color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 URL Clustering Report</h1>
+            <p>Security Investigation Dashboard</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Generated: 2026-01-12 11:15:28</p>
+        </div>
+
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-label">Total URLs</div>
+                <div class="stat-number">168</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Clusters Found</div>
+                <div class="stat-number">12</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Clustered URLs</div>
+                <div class="stat-number">152</div>
+                <span class="badge badge-success">90.5%</span>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Noise Points</div>
+                <div class="stat-number">16</div>
+                <span class="badge badge-warning">9.5%</span>
+            </div>
+        </div>
+
+        <div class="charts-section">
+            <h2 class="charts-title">📊 Visual Analytics</h2>
+            
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <div class="chart-title">Clustered vs Noise Distribution</div>
+                    <div class="chart-canvas">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Top 10 Largest Clusters</div>
+                    <div class="chart-canvas">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+        
+        <script>
+            const chartData = {"pie": {"clustered": 152, "noise": 16}, "bar": [{"cluster_id": 5, "pattern_count": 7, "request_count": 268}, {"cluster_id": 8, "pattern_count": 5, "request_count": 47}, {"cluster_id": 7, "pattern_count": 16, "request_count": 31}, {"cluster_id": 2, "pattern_count": 26, "request_count": 26}, {"cluster_id": 0, "pattern_count": 20, "request_count": 22}, {"cluster_id": 11, "pattern_count": 19, "request_count": 21}, {"cluster_id": 9, "pattern_count": 11, "request_count": 20}, {"cluster_id": 6, "pattern_count": 9, "request_count": 15}, {"cluster_id": 10, "pattern_count": 9, "request_count": 15}, {"cluster_id": 3, "pattern_count": 14, "request_count": 14}]};
+        </script>
+
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">📊 Discovered Clusters</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Click on any cluster to expand and view URL patterns with original examples
+                </p>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(5)">
+                        <div class="cluster-title">
+                            Cluster #5 - 🟡 MEDIUM
+                            <span class="badge badge-warning">7 patterns | 268 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-5">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/productType/&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">21 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33419/productType/120x90</li>
+                                    <li>/image/12/productType/120x90</li>
+                                    <li>/image/32703/productType/120x90</li>
+                                    <li><em>... and 18 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/mainSlide</code>
+                                </div>
+                                <span class="occurrence-badge">3 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/1218/mainSlide</li>
+                                    <li>/image/1215/mainSlide</li>
+                                    <li>/image/1210/mainSlide</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/brand</code>
+                                </div>
+                                <span class="occurrence-badge">27 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/41/brand</li>
+                                    <li>/image/180/brand</li>
+                                    <li>/image/58/brand</li>
+                                    <li><em>... and 24 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/mainSlideMobile</code>
+                                </div>
+                                <span class="occurrence-badge">7 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/788/mainSlideMobile</li>
+                                    <li>/image/764/mainSlideMobile</li>
+                                    <li>/image/983/mainSlideMobile</li>
+                                    <li><em>... and 4 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/specialSale</code>
+                                </div>
+                                <span class="occurrence-badge">3 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/8727/specialSale</li>
+                                    <li>/image/8739/specialSale</li>
+                                    <li>/image/8712/specialSale</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/productModel/&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">191 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/62423/productModel/150x150</li>
+                                    <li>/image/61483/productModel/200x200</li>
+                                    <li>/image/11667/productModel/200x200</li>
+                                    <li><em>... and 188 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/productTypeType</code>
+                                </div>
+                                <span class="occurrence-badge">16 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/2/productTypeType</li>
+                                    <li>/image/120/productTypeType</li>
+                                    <li>/image/14/productTypeType</li>
+                                    <li><em>... and 13 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(8)">
+                        <div class="cluster-title">
+                            Cluster #8 - 🟢 LOW
+                            <span class="badge badge-success">5 patterns | 47 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-8">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">5 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p53,b20,b172,b14,b92?page=3</li>
+                                    <li>/filter/stexists,p53,b20,b172,b14,b92?page=1</li>
+                                    <li>/filter/stexists,p53,b20,b172,b14,b92?page=5</li>
+                                    <li><em>... and 2 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter?f=p&lt;NUM&gt;&amp;page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">4 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter?f=p12129&amp;page=19</li>
+                                    <li>/filter?f=p12129&amp;page=14</li>
+                                    <li>/filter?f=p12129&amp;page=21</li>
+                                    <li><em>... and 1 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">22 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p12595?page=1</li>
+                                    <li>/filter/stexists,p18555?page=1</li>
+                                    <li>/filter/stexists,p18561?page=1</li>
+                                    <li><em>... and 19 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter?f=p&lt;NUM&gt;,b&lt;NUM&gt;&amp;o=b&amp;page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter?f=p53,b19&amp;o=b&amp;page=1</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;,b&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">15 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p8392,b80?page=1</li>
+                                    <li>/filter/stexists,p8391,b80?page=2</li>
+                                    <li>/filter/stexists,p8393,b80?page=1</li>
+                                    <li><em>... and 12 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(7)">
+                        <div class="cluster-title">
+                            Cluster #7 - 🟢 LOW
+                            <span class="badge badge-success">16 patterns | 31 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-7">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/b&lt;NUM&gt;,p&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/b1,p62</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/fryer/سرخ-کن</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/fryer/سرخ-کن</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/meat-grinder/چرخ-گوشت</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/meat-grinder/چرخ-گوشت</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/citrus-only-juicer/آب-پرتقال-گیری</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/citrus-only-juicer/آب-پرتقال-گیری</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/food-preparation/آماده-سازی-غذا</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/food-preparation/آماده-سازی-غذا</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/cell-phone/گوشی-موبایل</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/cell-phone/گوشی-موبایل</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/search</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/search</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/browse/mixer/همزن</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/browse/mixer/همزن</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/browse/blu-ray</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/browse/blu-ray</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">13 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p24656</li>
+                                    <li>/filter/stexists,p24657</li>
+                                    <li>/filter/stexists,p18560</li>
+                                    <li><em>... and 10 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;,b&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">4 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p8393,b80</li>
+                                    <li>/filter/stexists,p8391,b80</li>
+                                    <li>/filter/stexists,p53,b165</li>
+                                    <li><em>... and 1 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/filter/stexists,p&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/filter/stexists,p53,b20,b172,b14,b92</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/settings/logo</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/settings/logo</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/site/ping</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/site/ping</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/site/enamad</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/site/enamad</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(2)">
+                        <div class="cluster-title">
+                            Cluster #2 - 🟢 LOW
+                            <span class="badge badge-success">26 patterns | 26 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-2">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مایکروفر-رومیزی-سامسونگ-مدل-CE&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/10075/13903/مایکروفر-رومیزی-سامسونگ-مدل-CE288</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مایکروفر-رومیزی-ال-جی-مدل-MG&lt;NUM&gt;S</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/31675/61782/مایکروفر-رومیزی-ال-جی-مدل-MG42S</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مخلوط-کن-و-آسیاب-پاناسونیک-مدل-MX-GX&lt;NUM&gt;-W</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/7073/8523/مخلوط-کن-و-آسیاب-پاناسونیک-مدل-MX-GX1021-W</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مایکروفر-رومیزی-سامسونگ-مدل-ME&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/7793/9663/مایکروفر-رومیزی-سامسونگ-مدل-ME201</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/سشوار-خانگی-پرنسلی-مدل-PR&lt;NUM&gt;AT</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/31893/62100/سشوار-خانگی-پرنسلی-مدل-PR257AT</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/فشارسنج-بازویی-ایزی-لایف-مدل-HS-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/6021/6638/فشارسنج-بازویی-ایزی-لایف-مدل-HS-2000</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/ساعت-عقربه-ای-دیجیتال-مردانه-CASIO-مدل-GA-&lt;NUM&gt;-&lt;NUM&gt;BDR</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/33384/65380/ساعت-عقربه-ای-دیجیتال-مردانه-CASIO-مدل-GA-1000-1BDR</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/ساعت-مچی-عقربه-ای-زنانه-گس-مدل-W&lt;NUM&gt;L&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/6930/7990/ساعت-مچی-عقربه-ای-زنانه-گس-مدل-W22520L1</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/ساعت-عقربه-ای-دیجیتال-اسپرت-CASIO-مدل-GA-&lt;NUM&gt;RG-&lt;NUM&gt;ADR</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/33417/65382/ساعت-عقربه-ای-دیجیتال-اسپرت-CASIO-مدل-GA-110RG-7ADR</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/ساعت-مچی-عقربه-ای-مردانه-CASIO-مدل-EFV-&lt;NUM&gt;BL-&lt;NUM&gt;AVUDF</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/33396/64042/ساعت-مچی-عقربه-ای-مردانه-CASIO-مدل-EFV-520BL-2AVUDF</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/سر-شور-آریا-صنعت-مدل-SN-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/14496/25676/سر-شور-آریا-صنعت-مدل-SN-3270</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/سینک-ظرفشویی-توکار-لتو-مدل-TX-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/4031/20/سینک-ظرفشویی-توکار-لتو-مدل-TX-3</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/صندلی-ماساژور-rain-sport-مدل-RK-&lt;NUM&gt;b</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/21891/46412/صندلی-ماساژور-rain-sport-مدل-RK-2106b</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/تب-سنج-Omron-مدل-GentleTemp-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/31856/62060/تب-سنج-Omron-مدل-GentleTemp-720</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/اتو-مو-بابیلیس-مدل-I-pro-&lt;NUM&gt;-XL-ST&lt;NUM&gt;E</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/27603/56107/اتو-مو-بابیلیس-مدل-I-pro-235-XL-ST389E</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/اتو-مو-بابیلیس-مدل-ST&lt;NUM&gt;E</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/32082/62346/اتو-مو-بابیلیس-مدل-ST481E</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/اپیلاتور-براون-مدل-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/29158/58414/اپیلاتور-براون-مدل-3170</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-LE-&lt;NUM&gt;D&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/32718/63159/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-LE-29D40</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-&lt;NUM&gt;XS&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/32437/62798/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-24XS2450</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/توستر-میدیا-مدل-MG&lt;NUM&gt;CHB</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/33339/63978/توستر-میدیا-مدل-MG25CHB</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center; padding: 15px;">
+                            <button class="show-more-btn" onclick="alert('Showing 20 of 26 patterns\n\nFull data available in:\n- clusters_final.csv\n- clusters_masked.txt')">
+                                📄 6 more patterns (view in CSV/TXT)
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(0)">
+                        <div class="cluster-title">
+                            Cluster #0 - 🟢 LOW
+                            <span class="badge badge-success">20 patterns | 22 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-0">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/guarantees/bestPrice.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/guarantees/bestPrice.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/guarantees/fastDelivery.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/guarantees/fastDelivery.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/guarantees/goodShopping.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/guarantees/goodShopping.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/guarantees/support.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/guarantees/support.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/amp/instagram.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/amp/instagram.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/amp/telegram.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/amp/telegram.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/bundle-bundle_site_defer.min.js</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/bundle-bundle_site_defer.min.js</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/robots.txt</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/robots.txt</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/amp/blog.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/amp/blog.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/css/font_awesome/fonts/fontawesome-webfont.woff&lt;NUM&gt;?v=&lt;NUM&gt;.&lt;NUM&gt;.&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/css/font_awesome/fonts/fontawesome-webfont.woff2?v=4.7.0</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/amp/third-party/footer-mobile.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/amp/third-party/footer-mobile.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/favicon.ico</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/favicon.ico</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/css/font/wyekan/font.woff</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/css/font/wyekan/font.woff</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/bundle-bundle_site_head.css</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/bundle-bundle_site_head.css</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/manifest.json</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/manifest.json</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/favicon.ico</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/favicon.ico</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/guarantees/warranty.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/guarantees/warranty.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/search-category-arrow.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/search-category-arrow.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/images/third-party/footer.png</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/images/third-party/footer.png</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/static/js/accordion.js?_=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">3 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/static/js/accordion.js?_=1548117047784</li>
+                                    <li>/static/js/accordion.js?_=1548117035128</li>
+                                    <li>/static/js/accordion.js?_=1548117042983</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(11)">
+                        <div class="cluster-title">
+                            Cluster #11 - 🟢 LOW
+                            <span class="badge badge-success">19 patterns | 21 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-11">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">2 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33754?name=2050-11.jpg&amp;wh=200x200</li>
+                                    <li>/image/29128?name=704-1.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=des-&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32837?name=des-3600-1111.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;-&lt;NUM&gt;-fw.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/11947?name=11947-1-fw.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=janome-&lt;NUM&gt;-w.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/20123?name=janome-8200-w.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=janome-&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/30832?name=janome-1920-01.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=elite-new-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32931?name=elite-new-66.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=m&lt;NUM&gt;a-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/34187?name=m12a-1.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=model-b&lt;NUM&gt;u-&lt;NUM&gt;-.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33888?name=model-b2048u-1-.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=mfp-m&lt;NUM&gt;a-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/34185?name=mfp-m130a-1.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=photo_&lt;NUM&gt;-&lt;NUM&gt;-&lt;NUM&gt;_&lt;NUM&gt;-&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/29389?name=photo_2015-11-21_10-14-14.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=ms&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32745?name=ms506-14.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=tm-&lt;NUM&gt;sp-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33717?name=tm-3500sp-1.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=samsung-galaxy-s&lt;NUM&gt;-plus-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/31042?name=samsung-galaxy-s8-plus-3.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=sxp&lt;NUM&gt;_&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/31790?name=sxp450_11.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=samsung-galaxy-s&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/31041?name=samsung-galaxy-s8-8.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=r&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/34241?name=r402-1.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;f&lt;NUM&gt;fhn-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32278?name=24f390fhn-11.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;plus-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33755?name=9400plus-11.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=eb-x&lt;NUM&gt;-&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">2 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32756?name=eb-x05-11.jpg&amp;wh=200x200</li>
+                                    <li>/image/32757?name=eb-x41-4.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(9)">
+                        <div class="cluster-title">
+                            Cluster #9 - 🟢 LOW
+                            <span class="badge badge-success">11 patterns | 20 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-9">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=pr&lt;NUM&gt;at.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32574?name=pr465at.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/specialSale?role=e&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">9 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/8727/specialSale?role=e3</li>
+                                    <li>/image/8739/specialSale?role=e1</li>
+                                    <li>/image/8712/specialSale?role=e3</li>
+                                    <li><em>... and 6 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=black...jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/28821?name=black...jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">2 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/5820?name=41138.jpg&amp;wh=max</li>
+                                    <li>/image/3597?name=1.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;redd.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/28821?name=7redd.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;red.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/28821?name=7red.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=-jetblack.....jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/28821?name=-jetblack.....jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/{{basketItem.id}}?type=productModel&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/{{basketItem.id}}?type=productModel&amp;wh=50x50</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=iphonexs_silver.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33631?name=iphonexs_silver.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=gastroback-&lt;NUM&gt;.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/30782?name=gastroback-21.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=iphone-xs-&lt;NUM&gt;.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/33631?name=iphone-xs-2.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(6)">
+                        <div class="cluster-title">
+                            Cluster #6 - 🟢 LOW
+                            <span class="badge badge-success">9 patterns | 15 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-6">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/p&lt;NUM&gt;,b&lt;NUM&gt;,b&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/p25,b103,b50</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/b&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/b113?page=1</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/p&lt;NUM&gt;,b&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/p62,b5?page=1</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter?f=p&lt;NUM&gt;,b&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter?f=p12,b185</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/p&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">5 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/p62?page=1</li>
+                                    <li>/m/filter/p1233?page=1</li>
+                                    <li>/m/filter/p3?page=1</li>
+                                    <li><em>... and 2 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/b&lt;NUM&gt;,p&lt;NUM&gt;,stexists,t&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/b99,p4510,stexists,t116</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/b&lt;NUM&gt;,p&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/b1,p1?page=1</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/b&lt;NUM&gt;,p&lt;NUM&gt;,stexists</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/b99,p4510,stexists</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/filter/p&lt;NUM&gt;,b&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">3 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/filter/p62,b5</li>
+                                    <li>/m/filter/p29,b103</li>
+                                    <li>/m/filter/p25,b103</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(10)">
+                        <div class="cluster-title">
+                            Cluster #10 - 🟢 LOW
+                            <span class="badge badge-success">9 patterns | 15 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-10">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=code+&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/3565?name=code+1129.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;thumb.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/28893?name=1450677370thumb.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">5 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/3553?name=502.jpg&amp;wh=200x200</li>
+                                    <li>/image/31356?name=5000.jpg&amp;wh=200x200</li>
+                                    <li>/image/3579?name=1139.jpg&amp;wh=200x200</li>
+                                    <li><em>... and 2 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=mdn&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/27142?name=mdn76.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=kachiran-roz&lt;NUM&gt;+.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32593?name=kachiran-roz210+.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=rs&lt;NUM&gt;w.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/1221?name=rs12w.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=z.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/11700?name=z.jpg&amp;wh=200x200</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=pr&lt;NUM&gt;at&lt;NUM&gt;.jpg&amp;wh=max</code>
+                                </div>
+                                <span class="occurrence-badge">3 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/32574?name=pr465at2.jpg&amp;wh=max</li>
+                                    <li>/image/32574?name=pr465at3.jpg&amp;wh=max</li>
+                                    <li>/image/32574?name=pr465at1.jpg&amp;wh=max</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/get?path=/Image/x&lt;NUM&gt;l&lt;NUM&gt;ghv&lt;NUM&gt;.jpg</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/get?path=/Image/x2l8ghv3.jpg</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(3)">
+                        <div class="cluster-title">
+                            Cluster #3 - 🟢 LOW
+                            <span class="badge badge-success">14 patterns | 14 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-3">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-کریستال-Bagsuette-Steel-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/24815/51764/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-کریستال-Bagsuette-Steel-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-مونتانا-Bagsuette-Steel-montana</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/24818/51769/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-مونتانا-Bagsuette-Steel-montana</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/گوشواره-زنانه-الیور-وبر-مدل-کریستال-طرح-دومینو-Domino-rhod-Crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/12900/21450/گوشواره-زنانه-الیور-وبر-مدل-کریستال-طرح-دومینو-Domino-rhod-Crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مهره-دستبند-الیور-وبر-مدل-استیل-مدل-شاین-هفت-رنگ-Shine-thin-Steel-crystal-AB</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/24672/51567/مهره-دستبند-الیور-وبر-مدل-استیل-مدل-شاین-هفت-رنگ-Shine-thin-Steel-crystal-AB</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/دستبند-زنانه-الیور-وبر-مدل-توپاز-طرح-ببر-طلایی-Tiger-gold-lt-col-topaz</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/12854/21356/دستبند-زنانه-الیور-وبر-مدل-توپاز-طرح-ببر-طلایی-Tiger-gold-lt-col-topaz</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/عطر-و-ادکلن-زنانه-دیور-مدل-Poison-Girl</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/30472/60169/عطر-و-ادکلن-زنانه-دیور-مدل-Poison-Girl</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/دستبند-زنانه-الیور-وبر-مدل-کریستال-طلایی-طرح-مقام-Rank-rhod-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/20910/45242/دستبند-زنانه-الیور-وبر-مدل-کریستال-طلایی-طرح-مقام-Rank-rhod-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/عطر-و-ادکلن-مشترک-Marc-Joseph-مدل-Vetiver-Story</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/32257/62557/عطر-و-ادکلن-مشترک-Marc-Joseph-مدل-Vetiver-Story</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/عطر-و-ادکلن-مردانه-هوگو-باس-مدل-Boss-Bottled-Night</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/30275/59941/عطر-و-ادکلن-مردانه-هوگو-باس-مدل-Boss-Bottled-Night</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-حلقه-ها-Double-Round-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/23405/49229/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-حلقه-ها-Double-Round-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-برازنده-Graceful-rhod-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/12865/21378/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-برازنده-Graceful-rhod-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/گردنبند-زنانه-الیور-وبر-مدل-شبدر-خوش-شانس-چهارپر-Lucky-rhod-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/20917/45246/گردنبند-زنانه-الیور-وبر-مدل-شبدر-خوش-شانس-چهارپر-Lucky-rhod-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-فرشته-مقدس-&lt;NUM&gt;AG-rhod-crystal</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/20950/45881/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-فرشته-مقدس-925AG-rhod-crystal</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-اسپایک-متالیک-Spike-Steel-metallic</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/product/24813/51761/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-اسپایک-متالیک-Spike-Steel-metallic</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(4)">
+                        <div class="cluster-title">
+                            Cluster #4 - 🟢 LOW
+                            <span class="badge badge-success">9 patterns | 12 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-4">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/tag/ادویه/feed/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/tag/ادویه/feed/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/tag/عطر/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/tag/عطر/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/article/&lt;NUM&gt;/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/article/606/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/home-appliances/food-preparation/grinder/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/home-appliances/food-preparation/grinder/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/sports/sport-fields/table-sports/table-football/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/sports/sport-fields/table-sports/table-football/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;/article/&lt;NUM&gt;x&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">4 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/image/1195/article/100x100</li>
+                                    <li>/image/1191/article/100x100</li>
+                                    <li>/image/1194/article/100x100</li>
+                                    <li><em>... and 1 more occurrences</em></li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/article/&lt;NUM&gt;/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/article/606/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/tag/گجت/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/tag/گجت/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/blog/tag/خواب/</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/blog/tag/خواب/</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="cluster-card">
+                    <div class="cluster-header" onclick="toggleCluster(1)">
+                        <div class="cluster-title">
+                            Cluster #1 - 🟢 LOW
+                            <span class="badge badge-success">7 patterns | 7 requests</span>
+                        </div>
+                        <div class="cluster-count">▼</div>
+                    </div>
+                    <div class="cluster-body" id="cluster-1">
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/گوشی-موبایل-اپل-مدل-iPhone-XS-&lt;NUM&gt;GB</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/33631/64998/گوشی-موبایل-اپل-مدل-iPhone-XS-256GB</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/آب-پرتقال-گیری-گاستروبک-مدل-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/5820/6404/آب-پرتقال-گیری-گاستروبک-مدل-41138</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/آب-پرتقال-گیری-تفال-مدل-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/3597/2542/آب-پرتقال-گیری-تفال-مدل-8309</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/ماشین-اصلاح-صورت-پرنسلی-مدل-PR&lt;NUM&gt;AT</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/32574/62991/ماشین-اصلاح-صورت-پرنسلی-مدل-PR465AT</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/گوشی-موبایل-سامسونگ-مدل-Galaxy-A&lt;NUM&gt;-(&lt;NUM&gt;)-Dual-&lt;NUM&gt;GB-(SM-A&lt;NUM&gt;)</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/33978/64784/گوشی-موبایل-سامسونگ-مدل-Galaxy-A9-(2018)-Dual-128GB-(SM-A920)</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/گوشی-موبایل-اپل-مدل-iPhone-&lt;NUM&gt;-&lt;NUM&gt;GB</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/28821/57721/گوشی-موبایل-اپل-مدل-iPhone-7-128GB</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pattern-block">
+                            <div class="pattern-header">
+                                <div>
+                                    <strong>Pattern:</strong> <code class="url-pattern">/m/product/&lt;NUM&gt;/&lt;NUM&gt;/کتری-برقی-گاستروبک-مدل-&lt;NUM&gt;</code>
+                                </div>
+                                <span class="occurrence-badge">1 occurrences</span>
+                            </div>
+                            <div class="original-examples">
+                                <strong>🔍 Original URLs (for investigation):</strong>
+                                <ul class="example-list">
+                                    <li>/m/product/30782/60550/کتری-برقی-گاستروبک-مدل-42420</li>
+
+                                </ul>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="section">
+                <div class="noise-section">
+                    <h2 class="section-title">⚠️ Noise Points (Outliers)</h2>
+                    <p style="margin-bottom: 20px; color: #856404;">
+                        These URL patterns don't fit into any cluster. Total: <strong>16 patterns</strong> | <strong>30 requests</strong>
+                        <br>They might be unique attacks, reconnaissance attempts, or false positives.
+                    </p>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/ajaxFilter/p&lt;NUM&gt;,b&lt;NUM&gt;?page=&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">2 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/ajaxFilter/p65,b1?page=2</li>
+                                <li>/ajaxFilter/p65,b1?page=1</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/amp-helper-frame.html?appId=a&lt;NUM&gt;a&lt;NUM&gt;c&lt;NUM&gt;-&lt;NUM&gt;c&lt;NUM&gt;-&lt;NUM&gt;a-a&lt;NUM&gt;-e&lt;NUM&gt;f&lt;NUM&gt;e&lt;NUM&gt;&amp;parentOrigin=https://www-zanbil-ir.cdn.ampproject.org</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/amp-helper-frame.html?appId=a624a1c1-0c93-466a-a546-e146710f97e6&amp;parentOrigin=https://www-zanbil-ir.cdn.ampproject.org</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/amp-helper-frame.html?appId=a&lt;NUM&gt;a&lt;NUM&gt;c&lt;NUM&gt;-&lt;NUM&gt;c&lt;NUM&gt;-&lt;NUM&gt;a-a&lt;NUM&gt;-e&lt;NUM&gt;f&lt;NUM&gt;e&lt;NUM&gt;&amp;parentOrigin=https://www.zanbil.ir</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/amp-helper-frame.html?appId=a624a1c1-0c93-466a-a546-e146710f97e6&amp;parentOrigin=https://www.zanbil.ir</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/amp_preconnect_polyfill_&lt;NUM&gt;_or_other_error_expected._Do_not_worry_about_it?&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">2 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/amp_preconnect_polyfill_404_or_other_error_expected._Do_not_worry_about_it?1548117000000</li>
+                                <li>/amp_preconnect_polyfill_404_or_other_error_expected._Do_not_worry_about_it?1548117180000</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/discountLabel/get/&lt;NUM&gt;?type=mobileSmallIcon</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/discountLabel/get/3?type=mobileSmallIcon</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/filter/p&lt;NUM&gt;,v&lt;NUM&gt;|سیلور.,v&lt;NUM&gt;|سفید.?o=v&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/filter/p5,v1|سیلور.,v1|سفید.?o=v1</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=-gold-select...-.jpg&amp;wh=max</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/image/28821?name=-gold-select...-.jpg&amp;wh=max</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=s&lt;NUM&gt;-alternatedefaultimage-&lt;NUM&gt;-&lt;NUM&gt;fe&lt;NUM&gt;eb-&lt;NUM&gt;c&lt;NUM&gt;-&lt;NUM&gt;f&lt;NUM&gt;c-afde-bc&lt;NUM&gt;add&lt;NUM&gt;ac&lt;NUM&gt;.jpg&amp;wh=&lt;NUM&gt;x&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/image/19274?name=s5070-alternatedefaultimage-1-9fe809eb-9c55-4f2c-afde-bc0add04ac25.jpg&amp;wh=200x200</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/m/browse/refrigerator-and-freezer/یخچال-فریزر</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/m/browse/refrigerator-and-freezer/یخچال-فریزر</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;/&lt;NUM&gt;/ساعت-مچی-عقربه-ای-مردانه-کاترپیلار-مدل-LB.&lt;NUM&gt;.&lt;NUM&gt;.&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/product/31656/61761/ساعت-مچی-عقربه-ای-مردانه-کاترپیلار-مدل-LB.111.24.134</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/m/updateVariation?__amp_source_origin=https://www.zanbil.ir</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/m/updateVariation?__amp_source_origin=https://www.zanbil.ir</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/m/prepareSearch?phrase=</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/m/prepareSearch?phrase=</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/image/&lt;NUM&gt;?name=silver-select....-.jpg&amp;wh=max</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/image/28821?name=silver-select....-.jpg&amp;wh=max</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/login/auth</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/login/auth</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/product/&lt;NUM&gt;?model=&lt;NUM&gt;</code>
+                            </div>
+                            <span class="occurrence-badge">13 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/product/7570?model=9258</li>
+                                <li>/product/13016?model=21698</li>
+                                <li>/product/15856?model=29949</li>
+                                <li><em>... and 10 more occurrences</em></li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="pattern-block noise-pattern">
+                        <div class="pattern-header">
+                            <div>
+                                <strong>Pattern:</strong> <code class="url-pattern">/site/alexaGooleAnalitic</code>
+                            </div>
+                            <span class="occurrence-badge">1 occurrences</span>
+                        </div>
+                        <div class="original-examples">
+                            <strong>🔍 Original URLs (for investigation):</strong>
+                            <ul class="example-list">
+                                <li>/site/alexaGooleAnalitic</li>
+
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Generated by URL Clustering Pipeline | Security Investigation Tool</p>
+            <p style="margin-top: 5px; font-size: 0.85em;">
+                For detailed analysis, refer to: clusters_final.csv & clusters_final.txt
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        function toggleCluster(clusterId) {
+            const body = document.getElementById('cluster-' + clusterId);
+            if (body) {
+                body.classList.toggle('active');
+                const header = body.previousElementSibling;
+                const arrow = header.querySelector('.cluster-count');
+                if (arrow) {
+                    arrow.textContent = body.classList.contains('active') ? '▲' : '▼';
+                }
+            }
+        }
+        
+        // Initialize charts
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing charts...');
+            
+            // Pie Chart
+            const pieCtx = document.getElementById('pieChart');
+            if (pieCtx) {
+                new Chart(pieCtx.getContext('2d'), {
+                    type: 'pie',
+                    data: {
+                        labels: ['Clustered URLs', 'Noise URLs'],
+                        datasets: [{
+                            data: [chartData.pie.clustered, chartData.pie.noise],
+                            backgroundColor: ['#4e73df', '#f6c23e'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const total = chartData.pie.clustered + chartData.pie.noise;
+                                        const percentage = ((context.parsed / total) * 100).toFixed(1);
+                                        return context.label + ': ' + context.parsed.toLocaleString() + ' (' + percentage + '%)';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Bar Chart
+            const barCtx = document.getElementById('barChart');
+            if (barCtx) {
+                const barLabels = chartData.bar.map(item => 'Cluster ' + item.cluster_id);
+                const barData = chartData.bar.map(item => item.request_count);
+                
+                new Chart(barCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: barLabels,
+                        datasets: [{
+                            label: 'Number of Requests',
+                            data: barData,
+                            backgroundColor: '#4e73df',
+                            borderColor: '#2e59d9',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+            
+            
+            console.log('Charts initialized successfully!');
+        });
+    </script>
+</body>
+</html>

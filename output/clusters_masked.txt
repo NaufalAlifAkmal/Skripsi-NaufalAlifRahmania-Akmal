@@ -1,0 +1,203 @@
+================================================================================
+CLUSTERING RESULTS - MASKED PATTERNS
+================================================================================
+Generated: 2026-01-12 11:15:28
+Total URL patterns: 168
+Total clusters: 12
+Noise patterns: 16
+
+Noise Points (Outliers): 16 patterns
+--------------------------------------------------------------------------------
+  /ajaxFilter/p<NUM>,b<NUM>?page=<NUM>
+  /amp-helper-frame.html?appId=a<NUM>a<NUM>c<NUM>-<NUM>c<NUM>-<NUM>a-a<NUM>-e<NUM>f<NUM>e<NUM>&parentOrigin=https://www-zanbil-ir.cdn.ampproject.org
+  /amp-helper-frame.html?appId=a<NUM>a<NUM>c<NUM>-<NUM>c<NUM>-<NUM>a-a<NUM>-e<NUM>f<NUM>e<NUM>&parentOrigin=https://www.zanbil.ir
+  /amp_preconnect_polyfill_<NUM>_or_other_error_expected._Do_not_worry_about_it?<NUM>
+  /discountLabel/get/<NUM>?type=mobileSmallIcon
+  /filter/p<NUM>,v<NUM>|سیلور.,v<NUM>|سفید.?o=v<NUM>
+  /image/<NUM>?name=-gold-select...-.jpg&wh=max
+  /image/<NUM>?name=s<NUM>-alternatedefaultimage-<NUM>-<NUM>fe<NUM>eb-<NUM>c<NUM>-<NUM>f<NUM>c-afde-bc<NUM>add<NUM>ac<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=silver-select....-.jpg&wh=max
+  /login/auth
+  /m/browse/refrigerator-and-freezer/یخچال-فریزر
+  /m/prepareSearch?phrase=
+  /m/updateVariation?__amp_source_origin=https://www.zanbil.ir
+  /product/<NUM>/<NUM>/ساعت-مچی-عقربه-ای-مردانه-کاترپیلار-مدل-LB.<NUM>.<NUM>.<NUM>
+  /product/<NUM>?model=<NUM>
+  /site/alexaGooleAnalitic
+
+Cluster 0: 20 patterns
+  /favicon.ico
+  /manifest.json
+  /robots.txt
+  /static/bundle-bundle_site_defer.min.js
+  /static/bundle-bundle_site_head.css
+  /static/css/font/wyekan/font.woff
+  /static/css/font_awesome/fonts/fontawesome-webfont.woff<NUM>?v=<NUM>.<NUM>.<NUM>
+  /static/images/amp/blog.png
+  /static/images/amp/instagram.png
+  /static/images/amp/telegram.png
+  /static/images/amp/third-party/footer-mobile.png
+  /static/images/favicon.ico
+  /static/images/guarantees/bestPrice.png
+  /static/images/guarantees/fastDelivery.png
+  /static/images/guarantees/goodShopping.png
+  /static/images/guarantees/support.png
+  /static/images/guarantees/warranty.png
+  /static/images/search-category-arrow.png
+  /static/images/third-party/footer.png
+  /static/js/accordion.js?_=<NUM>
+
+Cluster 1: 7 patterns
+  /m/product/<NUM>/<NUM>/آب-پرتقال-گیری-تفال-مدل-<NUM>
+  /m/product/<NUM>/<NUM>/آب-پرتقال-گیری-گاستروبک-مدل-<NUM>
+  /m/product/<NUM>/<NUM>/ماشین-اصلاح-صورت-پرنسلی-مدل-PR<NUM>AT
+  /m/product/<NUM>/<NUM>/کتری-برقی-گاستروبک-مدل-<NUM>
+  /m/product/<NUM>/<NUM>/گوشی-موبایل-اپل-مدل-iPhone-<NUM>-<NUM>GB
+  /m/product/<NUM>/<NUM>/گوشی-موبایل-اپل-مدل-iPhone-XS-<NUM>GB
+  /m/product/<NUM>/<NUM>/گوشی-موبایل-سامسونگ-مدل-Galaxy-A<NUM>-(<NUM>)-Dual-<NUM>GB-(SM-A<NUM>)
+
+Cluster 2: 26 patterns
+  /product/<NUM>/<NUM>/اتو-بخار-بایترون-مدل-BPV-E<NUM>
+  /product/<NUM>/<NUM>/اتو-مو-بابیلیس-مدل-I-pro-<NUM>-XL-ST<NUM>E
+  /product/<NUM>/<NUM>/اتو-مو-بابیلیس-مدل-ST<NUM>E
+  /product/<NUM>/<NUM>/اپیلاتور-براون-مدل-<NUM>
+  /product/<NUM>/<NUM>/تب-سنج-Omron-مدل-GentleTemp-<NUM>
+  /product/<NUM>/<NUM>/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-<NUM>XS<NUM>
+  /product/<NUM>/<NUM>/تلویزیون-ال-ای-دی-ایکس-ویژن-مدل-LE-<NUM>D<NUM>
+  /product/<NUM>/<NUM>/توستر-میدیا-مدل-MG<NUM>CHB
+  /product/<NUM>/<NUM>/ساعت-عقربه-ای-دیجیتال-اسپرت-CASIO-مدل-GA-<NUM>RG-<NUM>ADR
+  /product/<NUM>/<NUM>/ساعت-عقربه-ای-دیجیتال-مردانه-CASIO-مدل-GA-<NUM>-<NUM>BDR
+  /product/<NUM>/<NUM>/ساعت-مچی-عقربه-ای-زنانه-گس-مدل-W<NUM>L<NUM>
+  /product/<NUM>/<NUM>/ساعت-مچی-عقربه-ای-مردانه-CASIO-مدل-EFV-<NUM>BL-<NUM>AVUDF
+  /product/<NUM>/<NUM>/سر-شور-آریا-صنعت-مدل-SN-<NUM>
+  /product/<NUM>/<NUM>/سشوار-خانگی-پرنسلی-مدل-PR<NUM>AT
+  /product/<NUM>/<NUM>/سینک-ظرفشویی-توکار-لتو-مدل-TX-<NUM>
+  /product/<NUM>/<NUM>/صندلی-ماساژور-rain-sport-مدل-RK-<NUM>b
+  /product/<NUM>/<NUM>/فشارسنج-بازویی-ایزی-لایف-مدل-HS-<NUM>
+  /product/<NUM>/<NUM>/مایکروفر-رومیزی-ال-جی-مدل-MG<NUM>S
+  /product/<NUM>/<NUM>/مایکروفر-رومیزی-سامسونگ-مدل-CE<NUM>
+  /product/<NUM>/<NUM>/مایکروفر-رومیزی-سامسونگ-مدل-ME<NUM>
+  /product/<NUM>/<NUM>/مخلوط-کن-و-آسیاب-پاناسونیک-مدل-MX-GX<NUM>-W
+  /product/<NUM>/<NUM>/میز-عسلی-Persis-مدل-TS<NUM>
+  /product/<NUM>/<NUM>/همزن-بلک-اند-دکر-مدل-M<NUM>
+  /product/<NUM>/<NUM>/پیانو-آکوستیک-دیواری-YAMAHA-مدل-JU<NUM>
+  /product/<NUM>/<NUM>/چای-ساز-قوری-روی-کتری-فیلیپس-مدل-HD<NUM>
+  /product/<NUM>/<NUM>/یخچال-فریزر-سینجر-مدل-pearl-SR<NUM>
+
+Cluster 3: 14 patterns
+  /product/<NUM>/<NUM>/دستبند-زنانه-الیور-وبر-مدل-توپاز-طرح-ببر-طلایی-Tiger-gold-lt-col-topaz
+  /product/<NUM>/<NUM>/دستبند-زنانه-الیور-وبر-مدل-کریستال-طلایی-طرح-مقام-Rank-rhod-crystal
+  /product/<NUM>/<NUM>/عطر-و-ادکلن-زنانه-دیور-مدل-Poison-Girl
+  /product/<NUM>/<NUM>/عطر-و-ادکلن-مردانه-هوگو-باس-مدل-Boss-Bottled-Night
+  /product/<NUM>/<NUM>/عطر-و-ادکلن-مشترک-Marc-Joseph-مدل-Vetiver-Story
+  /product/<NUM>/<NUM>/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-اسپایک-متالیک-Spike-Steel-metallic
+  /product/<NUM>/<NUM>/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-مونتانا-Bagsuette-Steel-montana
+  /product/<NUM>/<NUM>/مهره-دستبند-الیور-وبر-مدل-استیل-طرح-قاب-کریستال-Bagsuette-Steel-crystal
+  /product/<NUM>/<NUM>/مهره-دستبند-الیور-وبر-مدل-استیل-مدل-شاین-هفت-رنگ-Shine-thin-Steel-crystal-AB
+  /product/<NUM>/<NUM>/گردنبند-زنانه-الیور-وبر-مدل-شبدر-خوش-شانس-چهارپر-Lucky-rhod-crystal
+  /product/<NUM>/<NUM>/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-برازنده-Graceful-rhod-crystal
+  /product/<NUM>/<NUM>/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-حلقه-ها-Double-Round-crystal
+  /product/<NUM>/<NUM>/گردنبند-زنانه-الیور-وبر-مدل-کریستال-طرح-فرشته-مقدس-<NUM>AG-rhod-crystal
+  /product/<NUM>/<NUM>/گوشواره-زنانه-الیور-وبر-مدل-کریستال-طرح-دومینو-Domino-rhod-Crystal
+
+Cluster 4: 9 patterns
+  /article/<NUM>/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)
+  /blog/home-appliances/food-preparation/grinder/
+  /blog/sports/sport-fields/table-sports/table-football/
+  /blog/tag/ادویه/feed/
+  /blog/tag/خواب/
+  /blog/tag/عطر/
+  /blog/tag/گجت/
+  /image/<NUM>/article/<NUM>x<NUM>
+  /m/article/<NUM>/علت-و-درمان-گردن-درد-(همراه-سردرد-و-سرگیجه)
+
+Cluster 5: 7 patterns
+  /image/<NUM>/brand
+  /image/<NUM>/mainSlide
+  /image/<NUM>/mainSlideMobile
+  /image/<NUM>/productModel/<NUM>x<NUM>
+  /image/<NUM>/productType/<NUM>x<NUM>
+  /image/<NUM>/productTypeType
+  /image/<NUM>/specialSale
+
+Cluster 6: 9 patterns
+  /m/filter/b<NUM>,p<NUM>,stexists
+  /m/filter/b<NUM>,p<NUM>,stexists,t<NUM>
+  /m/filter/b<NUM>,p<NUM>?page=<NUM>
+  /m/filter/b<NUM>?page=<NUM>
+  /m/filter/p<NUM>,b<NUM>
+  /m/filter/p<NUM>,b<NUM>,b<NUM>
+  /m/filter/p<NUM>,b<NUM>?page=<NUM>
+  /m/filter/p<NUM>?page=<NUM>
+  /m/filter?f=p<NUM>,b<NUM>
+
+Cluster 7: 16 patterns
+  /
+  /browse/blu-ray
+  /filter/b<NUM>,p<NUM>
+  /filter/stexists,p<NUM>
+  /filter/stexists,p<NUM>,b<NUM>
+  /filter/stexists,p<NUM>,b<NUM>,b<NUM>,b<NUM>,b<NUM>
+  /m/browse/cell-phone/گوشی-موبایل
+  /m/browse/citrus-only-juicer/آب-پرتقال-گیری
+  /m/browse/food-preparation/آماده-سازی-غذا
+  /m/browse/fryer/سرخ-کن
+  /m/browse/meat-grinder/چرخ-گوشت
+  /m/browse/mixer/همزن
+  /m/search
+  /settings/logo
+  /site/enamad
+  /site/ping
+
+Cluster 8: 5 patterns
+  /filter/stexists,p<NUM>,b<NUM>,b<NUM>,b<NUM>,b<NUM>?page=<NUM>
+  /filter/stexists,p<NUM>,b<NUM>?page=<NUM>
+  /filter/stexists,p<NUM>?page=<NUM>
+  /filter?f=p<NUM>&page=<NUM>
+  /filter?f=p<NUM>,b<NUM>&o=b&page=<NUM>
+
+Cluster 9: 11 patterns
+  /image/<NUM>/specialSale?role=e<NUM>
+  /image/<NUM>?name=-jetblack.....jpg&wh=max
+  /image/<NUM>?name=<NUM>.jpg&wh=max
+  /image/<NUM>?name=<NUM>red.jpg&wh=max
+  /image/<NUM>?name=<NUM>redd.jpg&wh=max
+  /image/<NUM>?name=black...jpg&wh=max
+  /image/<NUM>?name=gastroback-<NUM>.jpg&wh=max
+  /image/<NUM>?name=iphone-xs-<NUM>.jpg&wh=max
+  /image/<NUM>?name=iphonexs_silver.jpg&wh=max
+  /image/<NUM>?name=pr<NUM>at.jpg&wh=max
+  /image/{{basketItem.id}}?type=productModel&wh=<NUM>x<NUM>
+
+Cluster 10: 9 patterns
+  /image/<NUM>?name=<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=<NUM>thumb.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=code+<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=kachiran-roz<NUM>+.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=mdn<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=pr<NUM>at<NUM>.jpg&wh=max
+  /image/<NUM>?name=rs<NUM>w.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=z.jpg&wh=<NUM>x<NUM>
+  /image/get?path=/Image/x<NUM>l<NUM>ghv<NUM>.jpg
+
+Cluster 11: 19 patterns
+  /image/<NUM>?name=<NUM>-<NUM>-fw.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=<NUM>f<NUM>fhn-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=<NUM>plus-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=des-<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=eb-x<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=elite-new-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=janome-<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=janome-<NUM>-w.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=m<NUM>a-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=mfp-m<NUM>a-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=model-b<NUM>u-<NUM>-.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=ms<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=photo_<NUM>-<NUM>-<NUM>_<NUM>-<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=r<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=samsung-galaxy-s<NUM>-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=samsung-galaxy-s<NUM>-plus-<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=sxp<NUM>_<NUM>.jpg&wh=<NUM>x<NUM>
+  /image/<NUM>?name=tm-<NUM>sp-<NUM>.jpg&wh=<NUM>x<NUM>
+
