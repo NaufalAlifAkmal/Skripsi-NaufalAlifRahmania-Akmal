@@ -59,33 +59,6 @@ Noise points produced by HDBSCAN are treated as **high-priority candidates for s
 
 ---
 
-## 📊 Experimental Results
-- **Raw log entries**: 10,365,152
-- **Unique URL patterns after preprocessing**: 91,934
-- **Total clusters formed**: 802
-- **Noise (anomalous patterns)**: 325
-- **Clustering success rate**: 99.6%
-
-### Identified Attack Patterns in Noise
-Manual inspection of noise revealed patterns related to:
-- SQL Injection (SQLi)
-- Cross-Site Scripting (XSS)
-- Path Traversal / Local File Inclusion (LFI)
-- Remote Code Execution (RCE)
-
----
-
-## 📈 Clustering Evaluation Metrics
-| Metric | Value |
-|------|-------|
-| Silhouette Score | 0.0736 |
-| Davies-Bouldin Index | 2.4756 |
-| Calinski-Harabasz Score | 3473.67 |
-
-> Note: In security analytics, **cluster interpretability and anomaly isolation** are more critical than geometric separation alone.
-
----
-
 ## 🧠 Why HDBSCAN?
 - No need to predefine number of clusters
 - Handles varying density distributions
